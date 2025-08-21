@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        id("org.jetbrains.kotlin.android") version "1.9.24"
+    }
+}
+
+rootProject.name = "OrthoWebViewApp"
+include ':app'
