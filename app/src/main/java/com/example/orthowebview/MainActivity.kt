@@ -5,7 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Message
 import android.provider.CallLog
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebSettings
@@ -64,18 +66,48 @@ class MainActivity : AppCompatActivity() {
                                 startActivity(intent)
                                 return true
                             } catch (e: Exception) {
-                                // If WhatsApp is not installed, open in browser
-                                webView.loadUrl(urlString)
-                                return false
+                                // If WhatsApp is not installed, do nothing, as we can't open the link.
+                                return true // Prevent WebView from trying to load it.
+                            }
+                        }
+                        urlString.startsWith("http://") || urlString.startsWith("https://") -> {
+                            val uri = Uri.parse(urlString)
+                            if (uri.host == "ortho.life") {
+                                return false // Load in WebView
+                            } else {
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                startActivity(intent)
+                                return true // Handled by browser
                             }
                         }
                         else -> {
-                            // Handle other URL schemes by loading them in the WebView
+                            // Let WebView handle it
                             return false
                         }
                     }
                 }
                 return false
+            }
+        }
+
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
+                val newWebView = WebView(this@MainActivity).apply {
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                            url?.let {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                                startActivity(intent)
+                            }
+                            return true // The URL is handled.
+                        }
+                    }
+                }
+
+                val transport = resultMsg.obj as WebView.WebViewTransport
+                transport.webView = newWebView
+                resultMsg.sendToTarget()
+                return true
             }
         }
 
