@@ -184,12 +184,15 @@ class MainActivity : AppCompatActivity() {
             return null
         }
         val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME)
+        val limitedUri = CallLog.Calls.CONTENT_URI.buildUpon()
+            .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "5")
+            .build()
         val cursor = contentResolver.query(
-            CallLog.Calls.CONTENT_URI,
+            limitedUri,
             projection,
             null,
             null,
-            "${CallLog.Calls.DATE} DESC LIMIT 5"
+            "${CallLog.Calls.DATE} DESC"
         )
         cursor?.use {
             val numberColumn = it.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
