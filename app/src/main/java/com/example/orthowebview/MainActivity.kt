@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import android.content.Context
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
@@ -42,6 +43,12 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         // Add the JavaScript interface for clipboard
         webView.addJavascriptInterface(WebAppInterface(), "AndroidClipboard")
+
+        val fabRefresh: FloatingActionButton = findViewById(R.id.fab_refresh)
+        fabRefresh.setOnClickListener {
+            webView.reload()
+        }
+
         requestCallLogPermission()
     }
 
@@ -128,6 +135,9 @@ class MainActivity : AppCompatActivity() {
             // Enable clipboard access
             allowFileAccessFromFileURLs = true
             allowUniversalAccessFromFileURLs = true
+
+            // Caching
+            cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
         }
 
         // Enable long press for context menu (paste, etc.)
@@ -154,30 +164,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadWebViewWithNumber() {
-        val number = getMostRecentPhoneNumber()
-        if (number != null) {
-            webView.loadUrl("$baseUrl?number=$number")
+        val callDetails = getRecentCallDetails()
+        if (!callDetails.isNullOrEmpty()) {
+            val urlBuilder = StringBuilder("$baseUrl?")
+            callDetails.forEach { (number, name) ->
+                urlBuilder.append("numbers[]=${Uri.encode(number)}&")
+                urlBuilder.append("names[]=${Uri.encode(name ?: "")}&")
+            }
+            // Remove the last '&'
+            val url = urlBuilder.toString().dropLast(1)
+            webView.loadUrl(url)
         } else {
             webView.loadUrl(baseUrl)
         }
     }
 
-    private fun getMostRecentPhoneNumber(): String? {
+    private fun getRecentCallDetails(): List<Pair<String, String?>>? {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
             return null
         }
+        val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME)
         val cursor = contentResolver.query(
             CallLog.Calls.CONTENT_URI,
-            arrayOf(CallLog.Calls.NUMBER),
+            projection,
             null,
             null,
-            "${CallLog.Calls.DATE} DESC"
+            "${CallLog.Calls.DATE} DESC LIMIT 5"
         )
         cursor?.use {
-            if (it.moveToFirst()) {
-                val number = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
-                return number
+            val numberColumn = it.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
+            val nameColumn = it.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME)
+            val callDetails = mutableListOf<Pair<String, String?>>()
+            while (it.moveToNext()) {
+                val number = it.getString(numberColumn)
+                val name = it.getString(nameColumn)
+                callDetails.add(Pair(number, name))
             }
+            return callDetails
         }
         return null
     }
