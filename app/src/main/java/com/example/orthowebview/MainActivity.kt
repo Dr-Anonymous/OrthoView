@@ -185,8 +185,9 @@ class MainActivity : AppCompatActivity() {
             return null
         }
         val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME, CallLog.Calls.DATE)
+        // Fetch more calls to have a buffer for finding unique ones
         val limitedUri = CallLog.Calls.CONTENT_URI.buildUpon()
-            .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "5")
+            .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "25")
             .build()
         val cursor = contentResolver.query(
             limitedUri,
@@ -200,11 +201,14 @@ class MainActivity : AppCompatActivity() {
             val nameColumn = it.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME)
             val dateColumn = it.getColumnIndexOrThrow(CallLog.Calls.DATE)
             val callDetails = mutableListOf<Triple<String, String?, Long>>()
-            while (it.moveToNext()) {
+            val seenNumbers = HashSet<String>()
+            while (it.moveToNext() && callDetails.size < 5) {
                 val number = it.getString(numberColumn)
-                val name = it.getString(nameColumn)
-                val date = it.getLong(dateColumn)
-                callDetails.add(Triple(number, name, date))
+                if (seenNumbers.add(number)) {
+                    val name = it.getString(nameColumn)
+                    val date = it.getLong(dateColumn)
+                    callDetails.add(Triple(number, name, date))
+                }
             }
             return callDetails
         }
