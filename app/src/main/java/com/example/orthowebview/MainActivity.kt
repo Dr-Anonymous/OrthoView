@@ -167,9 +167,10 @@ class MainActivity : AppCompatActivity() {
         val callDetails = getRecentCallDetails()
         if (!callDetails.isNullOrEmpty()) {
             val urlBuilder = StringBuilder("$baseUrl?")
-            callDetails.forEach { (number, name) ->
+            callDetails.forEach { (number, name, date) ->
                 urlBuilder.append("numbers[]=${Uri.encode(number)}&")
                 urlBuilder.append("names[]=${Uri.encode(name ?: "")}&")
+                urlBuilder.append("timestamps[]=${date}&")
             }
             // Remove the last '&'
             val url = urlBuilder.toString().dropLast(1)
@@ -179,13 +180,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getRecentCallDetails(): List<Pair<String, String?>>? {
+    private fun getRecentCallDetails(): List<Triple<String, String?, Long>>? {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
             return null
         }
-        val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME)
+        val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME, CallLog.Calls.DATE)
+        // Fetch more calls to have a buffer for finding unique ones
         val limitedUri = CallLog.Calls.CONTENT_URI.buildUpon()
-            .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "5")
+            .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "25")
             .build()
         val cursor = contentResolver.query(
             limitedUri,
@@ -197,11 +199,16 @@ class MainActivity : AppCompatActivity() {
         cursor?.use {
             val numberColumn = it.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
             val nameColumn = it.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME)
-            val callDetails = mutableListOf<Pair<String, String?>>()
-            while (it.moveToNext()) {
+            val dateColumn = it.getColumnIndexOrThrow(CallLog.Calls.DATE)
+            val callDetails = mutableListOf<Triple<String, String?, Long>>()
+            val seenNumbers = HashSet<String>()
+            while (it.moveToNext() && callDetails.size < 5) {
                 val number = it.getString(numberColumn)
-                val name = it.getString(nameColumn)
-                callDetails.add(Pair(number, name))
+                if (seenNumbers.add(number)) {
+                    val name = it.getString(nameColumn)
+                    val date = it.getLong(dateColumn)
+                    callDetails.add(Triple(number, name, date))
+                }
             }
             return callDetails
         }
