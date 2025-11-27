@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.orthowebview'
+    namespace 'life.ortho.ortholink'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.orthowebview"
+        applicationId "life.ortho.ortholink"
         minSdk 23
         targetSdk 34
         versionCode 1

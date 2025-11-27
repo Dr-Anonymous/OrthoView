@@ -1,4 +1,4 @@
-package com.example.orthowebview
+package life.ortho.ortholink
 
 import android.Manifest
 import android.content.Intent
@@ -34,6 +34,25 @@ class MainActivity : AppCompatActivity() {
             }
             return ""
         }
+
+        @android.webkit.JavascriptInterface
+        fun isWhatsAppInstalled(): Boolean {
+            return isAppInstalled("com.whatsapp")
+        }
+
+        @android.webkit.JavascriptInterface
+        fun isWhatsAppBusinessInstalled(): Boolean {
+            return isAppInstalled("com.whatsapp.w4b")
+        }
+
+        private fun isAppInstalled(packageName: String): Boolean {
+            return try {
+                packageManager.getPackageInfo(packageName, 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,8 +60,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         webView = findViewById(R.id.webView)
         setupWebView()
-        // Add the JavaScript interface for clipboard
-        webView.addJavascriptInterface(WebAppInterface(), "AndroidClipboard")
+        // Add the JavaScript interface for clipboard and general Android features
+        val webInterface = WebAppInterface()
+        webView.addJavascriptInterface(webInterface, "AndroidClipboard")
+        webView.addJavascriptInterface(webInterface, "Android")
 
         val fabRefresh: FloatingActionButton = findViewById(R.id.fab_refresh)
         fabRefresh.setOnClickListener {
