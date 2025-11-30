@@ -31,6 +31,7 @@ class OverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var phoneNumber: String? = null
+    private var isOutgoing: Boolean = false
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -38,10 +39,7 @@ class OverlayService : Service() {
 
     private val CHANNEL_ID = "OverlayServiceChannel"
 
-    override fun onCreate() {
-        super.onCreate()
-        createNotificationChannel()
-    }
+
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = android.app.Notification.Builder(this, CHANNEL_ID)
@@ -69,6 +67,8 @@ class OverlayService : Service() {
         }
 
         phoneNumber = intent?.getStringExtra("PHONE_NUMBER")
+        isOutgoing = intent?.getBooleanExtra("IS_OUTGOING", false) ?: false
+        
         if (phoneNumber != null) {
             // Check if number is in contacts
             if (contactExists(this, phoneNumber!!)) {
@@ -331,24 +331,63 @@ class OverlayService : Service() {
 
         layoutActions.visibility = View.VISIBLE
 
-        val btnSpeaker = overlayView!!.findViewById<ImageButton>(R.id.btnSpeaker)
+        val btnSpeaker = overlayView!!.findViewById<Button>(R.id.btnSpeaker)
+        val btnDecline = overlayView!!.findViewById<Button>(R.id.btnDecline)
         val btnRestore = overlayView!!.findViewById<ImageButton>(R.id.btnRestore)
         val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
 
         btnSpeaker.setOnClickListener {
             toggleSpeaker()
         }
+        
+        // Initialize speaker state
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        updateSpeakerIconState(audioManager)
+
+        btnDecline.setOnClickListener {
+            endCall()
+        }
 
         btnRestore.setOnClickListener {
             restoreOverlay()
         }
 
-        btnReceiveCall.setOnClickListener {
-            acceptCall()
+        var isCallActive = false
+
+        if (isOutgoing) {
+            // Outgoing call: Show End button (Decline button styled as End), Hide Receive
+            btnReceiveCall.visibility = View.GONE
+            btnDecline.visibility = View.VISIBLE
+            // For outgoing, we can assume call is active/dialing, so show speaker? 
+            // Usually speaker is available immediately.
+            btnSpeaker.visibility = View.VISIBLE
+            
+            // Style btnDecline as "End Call"
+            // It already has the red X icon.
+        } else {
+            // Incoming call
+            btnReceiveCall.visibility = View.VISIBLE
+            btnDecline.visibility = View.VISIBLE
+            btnSpeaker.visibility = View.GONE
+
+            btnReceiveCall.setOnClickListener {
+                if (!isCallActive) {
+                    if (acceptCall()) {
+                        isCallActive = true
+                        btnReceiveCall.text = "End"
+                        btnReceiveCall.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F44336")) // Red
+                        
+                        btnDecline.visibility = View.GONE
+                        btnSpeaker.visibility = View.VISIBLE
+                    }
+                } else {
+                    endCall()
+                }
+            }
         }
 
         btnWhatsApp.setOnClickListener {
-            openWhatsApp(phone, null)
+            openWhatsApp(phone, "/")
         }
 
         btnClinic.setOnClickListener {
@@ -377,15 +416,24 @@ class OverlayService : Service() {
         }
     }
 
-    private fun toggleSpeaker() {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        audioManager.mode = android.media.AudioManager.MODE_IN_CALL
-        if (!audioManager.isSpeakerphoneOn) {
-            audioManager.isSpeakerphoneOn = true
-            Toast.makeText(this, "Speaker ON", Toast.LENGTH_SHORT).show()
+
+
+    private fun updateSpeakerIconState(audioManager: android.media.AudioManager) {
+        val btnSpeaker = overlayView?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSpeaker) ?: return
+        
+        var isSpeakerOn = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+             isSpeakerOn = audioManager.communicationDevice?.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
         } else {
-            audioManager.isSpeakerphoneOn = false
-            Toast.makeText(this, "Speaker OFF", Toast.LENGTH_SHORT).show()
+             isSpeakerOn = audioManager.isSpeakerphoneOn
+        }
+
+        if (isSpeakerOn) {
+            btnSpeaker.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50")) // Green
+            btnSpeaker.iconTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+        } else {
+            btnSpeaker.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+            btnSpeaker.iconTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.BLACK)
         }
     }
 
@@ -431,12 +479,13 @@ class OverlayService : Service() {
         }
     }
 
-    private fun acceptCall() {
+    private fun acceptCall(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val telecomManager = getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
             if (androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ANSWER_PHONE_CALLS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 try {
                     telecomManager.acceptRingingCall()
+                    return true
                 } catch (e: Exception) {
                     Toast.makeText(this, "Failed to answer call", Toast.LENGTH_SHORT).show()
                 }
@@ -445,6 +494,28 @@ class OverlayService : Service() {
             }
         } else {
             Toast.makeText(this, "Not supported on this Android version", Toast.LENGTH_SHORT).show()
+        }
+        return false
+    }
+
+    private fun endCall() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
+            if (androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ANSWER_PHONE_CALLS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                try {
+                    telecomManager.endCall()
+                    // Stop service immediately after ending call
+                    stopForeground(true)
+                    stopSelf()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to end call", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            // Fallback for older versions if necessary, but P (API 28) is the requirement for endCall()
+             Toast.makeText(this, "Not supported on this Android version", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -535,8 +606,27 @@ class OverlayService : Service() {
         }
     }
 
+    private val phoneStateListener = object : android.telephony.PhoneStateListener() {
+        override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+            if (state == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                stopForeground(true)
+                stopSelf()
+            }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+        val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+        telephonyManager.listen(phoneStateListener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+        telephonyManager.listen(phoneStateListener, android.telephony.PhoneStateListener.LISTEN_NONE)
+        
         if (overlayView != null && windowManager != null) {
             try {
                 windowManager?.removeView(overlayView)
@@ -545,5 +635,69 @@ class OverlayService : Service() {
             }
             overlayView = null
         }
+    }
+
+    private fun toggleSpeaker() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val btnSpeaker = overlayView?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSpeaker)
+
+        // Ensure we're in call mode first
+        if (audioManager.mode != android.media.AudioManager.MODE_IN_CALL) {
+            audioManager.mode = android.media.AudioManager.MODE_IN_CALL
+        }
+
+        // Determine current state
+        var isSpeakerOn = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val currentDevice = audioManager.communicationDevice
+            if (currentDevice != null && currentDevice.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                isSpeakerOn = true
+            } else {
+                // Fallback check
+                isSpeakerOn = audioManager.isSpeakerphoneOn
+            }
+        } else {
+            isSpeakerOn = audioManager.isSpeakerphoneOn
+        }
+
+        if (!isSpeakerOn) {
+            // Turn ON speaker
+            
+            // Primary method: Use legacy API (works on all versions)
+            audioManager.isSpeakerphoneOn = true
+            
+            // Supplementary: Try new API on Android 12+ 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    val devices = audioManager.availableCommunicationDevices
+                    val speakerDevice = devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                    if (speakerDevice != null) {
+                        audioManager.setCommunicationDevice(speakerDevice)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            
+        } else {
+            // Turn OFF speaker
+            
+            // Primary method: Use legacy API
+            audioManager.isSpeakerphoneOn = false
+            
+            // Supplementary: Try new API on Android 12+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    audioManager.clearCommunicationDevice()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        
+        // Update UI to reflect new state
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            updateSpeakerIconState(audioManager)
+        }, 100)
     }
 }

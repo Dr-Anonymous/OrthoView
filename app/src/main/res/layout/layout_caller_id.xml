@@ -493,43 +493,83 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:layout_marginTop="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnReceiveCall"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
-                    android:text="Receive"
-                    android:backgroundTint="#4CAF50"
+                    android:text="Answer"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#4CAF50"
                     android:textColor="#FFFFFF"
-                    android:layout_marginEnd="8dp"/>
+                    app:cornerRadius="32dp"
+                    app:icon="@drawable/ic_phone_call"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    android:layout_marginEnd="16dp"/>
                 
-                 <Button
-                    android:id="@+id/btnWhatsApp"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="WhatsApp"
-                    android:backgroundTint="#25D366"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginEnd="8dp"/>
+                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDecline"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    app:backgroundTint="#F44336"
+                    app:cornerRadius="32dp"
+                    app:icon="@drawable/ic_close"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:layout_marginEnd="16dp"/>
 
-                <ImageButton
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSpeaker"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_speaker"
-                    android:backgroundTint="#FFFFFF"
-                    android:tint="#000000"
-                    android:scaleType="centerInside"
-                    android:padding="12dp"/>
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    app:backgroundTint="#FFFFFF"
+                    app:strokeColor="#E0E0E0"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="32dp"
+                    app:icon="@drawable/ic_speaker"
+                    app:iconTint="#000000"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWhatsApp"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="Open WhatsApp"
+                    android:textSize="14sp"
+                    app:backgroundTint="#25D366"
+                    android:textColor="#FFFFFF"
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_message_circle" 
+                    app:iconGravity="textStart"/>
             </LinearLayout>
 
             <LinearLayout
@@ -537,37 +577,40 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnClinic"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Clinic"
                     android:textSize="12sp"
-                    android:backgroundTint="#607D8B"
+                    app:backgroundTint="#607D8B"
                     android:textColor="#FFFFFF"
-                    android:layout_marginEnd="4dp"/>
+                    app:cornerRadius="12dp"
+                    android:layout_marginEnd="8dp"/>
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLaxmi"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Laxmi"
                     android:textSize="12sp"
-                    android:backgroundTint="#607D8B"
+                    app:backgroundTint="#607D8B"
                     android:textColor="#FFFFFF"
-                    android:layout_marginEnd="4dp"/>
+                    app:cornerRadius="12dp"
+                    android:layout_marginEnd="8dp"/>
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnBadam"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Badam"
                     android:textSize="12sp"
-                    android:backgroundTint="#607D8B"
-                    android:textColor="#FFFFFF"/>
+                    app:backgroundTint="#607D8B"
+                    android:textColor="#FFFFFF"
+                    app:cornerRadius="12dp"/>
             </LinearLayout>
 
         </LinearLayout>
