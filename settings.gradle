@@ -9,5 +9,5 @@ pluginManagement {
     }
 }
 
-rootProject.name = "OrthoWebViewApp"
+rootProject.name = "OrthoLink"
 include ':app'

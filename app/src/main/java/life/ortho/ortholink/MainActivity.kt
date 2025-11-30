@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Message
 import android.provider.CallLog
+import android.provider.Settings
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -70,7 +72,7 @@ class MainActivity : AppCompatActivity() {
             webView.reload()
         }
 
-        requestCallLogPermission()
+        checkAndRequestPermissions()
     }
 
     private fun setupWebView() {
@@ -166,21 +168,63 @@ class MainActivity : AppCompatActivity() {
         webView.setOnLongClickListener { false } // Return false to allow default context menu
     }
 
-    private fun requestCallLogPermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED) {
-            loadWebViewWithNumber()
+    private fun checkAndRequestPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.PROCESS_OUTGOING_CALLS,
+            Manifest.permission.ANSWER_PHONE_CALLS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val missingPermissions = permissions.filter {
+            ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missingPermissions.isNotEmpty()) {
+            requestPermissionLauncher.launch(missingPermissions.toTypedArray())
         } else {
-            requestPermissionLauncher.launch(Manifest.permission.READ_CALL_LOG)
+            checkOverlayPermission()
         }
     }
 
     private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        // Check if all permissions are granted
+        val allGranted = permissions.entries.all { it.value }
+        if (allGranted) {
+            checkOverlayPermission()
+        } else {
+            // Some permissions denied, maybe show rationale or proceed with limited functionality
+            // For now, try to proceed to overlay check anyway, or just load webview
+            checkOverlayPermission()
+        }
+    }
+
+    private fun checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            overlayPermissionLauncher.launch(intent)
+        } else {
+            loadWebViewWithNumber()
+        }
+    }
+
+    private val overlayPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            // Permission denied
             loadWebViewWithNumber()
         } else {
-            webView.loadUrl(baseUrl)
+            // Permission granted
+            loadWebViewWithNumber()
         }
     }
 
