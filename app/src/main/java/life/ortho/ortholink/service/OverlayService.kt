@@ -70,10 +70,39 @@ class OverlayService : Service() {
 
         phoneNumber = intent?.getStringExtra("PHONE_NUMBER")
         if (phoneNumber != null) {
+            // Check if number is in contacts
+            if (contactExists(this, phoneNumber!!)) {
+                // It's a saved contact, do not show overlay
+                stopForeground(true)
+                stopSelf()
+                return START_NOT_STICKY
+            }
+
             // Fetch data FIRST, then show overlay
             fetchData(phoneNumber!!)
         }
         return START_NOT_STICKY
+    }
+
+    private fun contactExists(context: Context, number: String): Boolean {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            return false // Permission not granted, assume unknown
+        }
+        
+        val lookupUri = android.net.Uri.withAppendedPath(android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI, android.net.Uri.encode(number))
+        val projection = arrayOf(android.provider.ContactsContract.PhoneLookup._ID)
+        var cur: android.database.Cursor? = null
+        try {
+            cur = context.contentResolver.query(lookupUri, projection, null, null, null)
+            if (cur != null && cur.moveToFirst()) {
+                return true // Contact found
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            cur?.close()
+        }
+        return false
     }
 
     private fun createNotificationChannel() {
@@ -302,6 +331,18 @@ class OverlayService : Service() {
 
         layoutActions.visibility = View.VISIBLE
 
+        val btnSpeaker = overlayView!!.findViewById<ImageButton>(R.id.btnSpeaker)
+        val btnRestore = overlayView!!.findViewById<ImageButton>(R.id.btnRestore)
+        val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
+
+        btnSpeaker.setOnClickListener {
+            toggleSpeaker()
+        }
+
+        btnRestore.setOnClickListener {
+            restoreOverlay()
+        }
+
         btnReceiveCall.setOnClickListener {
             acceptCall()
         }
@@ -336,6 +377,60 @@ class OverlayService : Service() {
         }
     }
 
+    private fun toggleSpeaker() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        audioManager.mode = android.media.AudioManager.MODE_IN_CALL
+        if (!audioManager.isSpeakerphoneOn) {
+            audioManager.isSpeakerphoneOn = true
+            Toast.makeText(this, "Speaker ON", Toast.LENGTH_SHORT).show()
+        } else {
+            audioManager.isSpeakerphoneOn = false
+            Toast.makeText(this, "Speaker OFF", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun minimizeOverlay() {
+        if (overlayView == null || windowManager == null) return
+
+        val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
+        val btnRestore = overlayView!!.findViewById<ImageButton>(R.id.btnRestore)
+
+        mainContent.visibility = View.GONE
+        btnRestore.visibility = View.VISIBLE
+
+        val layoutParams = overlayView!!.layoutParams as WindowManager.LayoutParams
+        layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT
+        layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
+        layoutParams.gravity = Gravity.TOP or Gravity.END
+        layoutParams.y = 100 // Offset
+
+        try {
+            windowManager!!.updateViewLayout(overlayView, layoutParams)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun restoreOverlay() {
+        if (overlayView == null || windowManager == null) return
+
+        val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
+        val btnRestore = overlayView!!.findViewById<ImageButton>(R.id.btnRestore)
+
+        mainContent.visibility = View.VISIBLE
+        btnRestore.visibility = View.GONE
+
+        val layoutParams = overlayView!!.layoutParams as WindowManager.LayoutParams
+        layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
+        layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT
+        
+        try {
+            windowManager!!.updateViewLayout(overlayView, layoutParams)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun acceptCall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val telecomManager = getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
@@ -364,7 +459,9 @@ class OverlayService : Service() {
             i.data = Uri.parse(url)
             i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(i)
-            // Do not stop self, user might want to return
+            
+            // Minimize overlay instead of stopping service
+            minimizeOverlay()
         } catch (e: Exception) {
             Toast.makeText(this, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
         }
