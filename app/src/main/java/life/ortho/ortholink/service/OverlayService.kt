@@ -331,18 +331,14 @@ class OverlayService : Service() {
 
         layoutActions.visibility = View.VISIBLE
 
-        val btnSpeaker = overlayView!!.findViewById<Button>(R.id.btnSpeaker)
+        val btnMinimize = overlayView!!.findViewById<Button>(R.id.btnMinimize)
         val btnDecline = overlayView!!.findViewById<Button>(R.id.btnDecline)
         val btnRestore = overlayView!!.findViewById<ImageButton>(R.id.btnRestore)
         val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
 
-        btnSpeaker.setOnClickListener {
-            toggleSpeaker()
+        btnMinimize.setOnClickListener {
+            minimizeOverlay()
         }
-        
-        // Initialize speaker state
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        updateSpeakerIconState(audioManager)
 
         btnDecline.setOnClickListener {
             endCall()
@@ -358,9 +354,8 @@ class OverlayService : Service() {
             // Outgoing call: Show End button (Decline button styled as End), Hide Receive
             btnReceiveCall.visibility = View.GONE
             btnDecline.visibility = View.VISIBLE
-            // For outgoing, we can assume call is active/dialing, so show speaker? 
-            // Usually speaker is available immediately.
-            btnSpeaker.visibility = View.VISIBLE
+            // For outgoing calls, show minimize button
+            btnMinimize.visibility = View.VISIBLE
             
             // Style btnDecline as "End Call"
             // It already has the red X icon.
@@ -368,7 +363,7 @@ class OverlayService : Service() {
             // Incoming call
             btnReceiveCall.visibility = View.VISIBLE
             btnDecline.visibility = View.VISIBLE
-            btnSpeaker.visibility = View.GONE
+            btnMinimize.visibility = View.GONE
 
             btnReceiveCall.setOnClickListener {
                 if (!isCallActive) {
@@ -378,7 +373,7 @@ class OverlayService : Service() {
                         btnReceiveCall.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F44336")) // Red
                         
                         btnDecline.visibility = View.GONE
-                        btnSpeaker.visibility = View.VISIBLE
+                        btnMinimize.visibility = View.VISIBLE
                     }
                 } else {
                     endCall()
@@ -418,25 +413,6 @@ class OverlayService : Service() {
 
 
 
-    private fun updateSpeakerIconState(audioManager: android.media.AudioManager) {
-        val btnSpeaker = overlayView?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSpeaker) ?: return
-        
-        var isSpeakerOn = false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-             isSpeakerOn = audioManager.communicationDevice?.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-        } else {
-             isSpeakerOn = audioManager.isSpeakerphoneOn
-        }
-
-        if (isSpeakerOn) {
-            btnSpeaker.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50")) // Green
-            btnSpeaker.iconTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
-        } else {
-            btnSpeaker.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
-            btnSpeaker.iconTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.BLACK)
-        }
-    }
-
     private fun minimizeOverlay() {
         if (overlayView == null || windowManager == null) return
 
@@ -449,8 +425,9 @@ class OverlayService : Service() {
         val layoutParams = overlayView!!.layoutParams as WindowManager.LayoutParams
         layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT
         layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-        layoutParams.gravity = Gravity.TOP or Gravity.END
-        layoutParams.y = 100 // Offset
+        layoutParams.gravity = Gravity.BOTTOM or Gravity.END
+        layoutParams.x = 16 // 16dp from right edge
+        layoutParams.y = 100 // 100dp from bottom
 
         try {
             windowManager!!.updateViewLayout(overlayView, layoutParams)
@@ -499,28 +476,53 @@ class OverlayService : Service() {
     }
 
     private fun endCall() {
+        android.util.Log.d("OverlayService", "endCall() called")
+        
+        // Try to end the call, but ALWAYS close the overlay afterwards
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val telecomManager = getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
             if (androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ANSWER_PHONE_CALLS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 try {
+                    android.util.Log.d("OverlayService", "Attempting to end call via TelecomManager")
                     telecomManager.endCall()
-                    // Stop service immediately after ending call
-                    stopForeground(true)
-                    stopSelf()
+                    android.util.Log.d("OverlayService", "telecomManager.endCall() succeeded")
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Failed to end call", Toast.LENGTH_SHORT).show()
+                    android.util.Log.e("OverlayService", "Failed to end call", e)
+                    e.printStackTrace()
                 }
             } else {
-                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+                android.util.Log.w("OverlayService", "No permission to end call")
             }
-        } else {
-            // Fallback for older versions if necessary, but P (API 28) is the requirement for endCall()
-             Toast.makeText(this, "Not supported on this Android version", Toast.LENGTH_SHORT).show()
         }
+        
+        // ALWAYS stop the service and close overlay when this button is pressed
+        android.util.Log.d("OverlayService", "Stopping service and removing overlay")
+        
+        // Remove overlay first
+        try {
+            if (overlayView != null && windowManager != null) {
+                windowManager?.removeView(overlayView)
+                overlayView = null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayService", "Error removing overlay", e)
+        }
+        
+        stopForeground(true)
+        stopSelf()
+        
+        android.util.Log.d("OverlayService", "Service stop requested")
     }
 
     private fun openWhatsApp(phone: String, message: String?) {
         try {
+            // Set automation state
+            AutomationState.shouldSend = true
+            AutomationState.currentPhoneNumber = phone
+            AutomationState.currentMessage = message
+            AutomationState.hasLink = message?.contains("http") == true
+            AutomationState.retryCount = 0
+            
             val url = if (message != null) {
                 "https://api.whatsapp.com/send?phone=$phone&text=${java.net.URLEncoder.encode(message, "UTF-8")}"
             } else {
@@ -535,6 +537,7 @@ class OverlayService : Service() {
             minimizeOverlay()
         } catch (e: Exception) {
             Toast.makeText(this, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
+            AutomationState.shouldSend = false // Reset on failure
         }
     }
 
@@ -606,11 +609,45 @@ class OverlayService : Service() {
         }
     }
 
+    private val retryReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "life.ortho.ortholink.ACTION_RETRY") {
+                val phone = AutomationState.currentPhoneNumber
+                val message = AutomationState.currentMessage
+                if (phone != null) {
+                    android.util.Log.d("OverlayService", "Retrying WhatsApp automation...")
+                    // Reset shouldSend to true, but keep retryCount (it's managed by AutomationService)
+                    AutomationState.shouldSend = true
+                    
+                    // Re-launch WhatsApp
+                    try {
+                        val url = if (message != null) {
+                            "https://api.whatsapp.com/send?phone=$phone&text=${java.net.URLEncoder.encode(message, "UTF-8")}"
+                        } else {
+                            "https://api.whatsapp.com/send?phone=$phone"
+                        }
+                        val i = Intent(Intent.ACTION_VIEW)
+                        i.data = Uri.parse(url)
+                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        startActivity(i)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
     private val phoneStateListener = object : android.telephony.PhoneStateListener() {
         override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+            android.util.Log.d("OverlayService", "Call state changed: $state (IDLE=${android.telephony.TelephonyManager.CALL_STATE_IDLE})")
             if (state == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
-                stopForeground(true)
-                stopSelf()
+                android.util.Log.d("OverlayService", "Call ended, stopping service")
+                // Add a small delay to ensure call is fully ended
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    stopForeground(true)
+                    stopSelf()
+                }, 500)
             }
         }
     }
@@ -620,84 +657,48 @@ class OverlayService : Service() {
         createNotificationChannel()
         val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
         telephonyManager.listen(phoneStateListener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
+        
+        // Register retry receiver
+        val filter = android.content.IntentFilter("life.ortho.ortholink.ACTION_RETRY")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(retryReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(retryReceiver, filter)
+        }
     }
 
     override fun onDestroy() {
+        android.util.Log.d("OverlayService", "onDestroy() called")
         super.onDestroy()
-        val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
-        telephonyManager.listen(phoneStateListener, android.telephony.PhoneStateListener.LISTEN_NONE)
         
+        // Unregister retry receiver
+        try {
+            unregisterReceiver(retryReceiver)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        // Unregister phone state listener
+        try {
+            val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+            telephonyManager.listen(phoneStateListener, android.telephony.PhoneStateListener.LISTEN_NONE)
+            android.util.Log.d("OverlayService", "PhoneStateListener unregistered")
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayService", "Error unregistering listener", e)
+        }
+        
+        // Remove overlay
         if (overlayView != null && windowManager != null) {
             try {
                 windowManager?.removeView(overlayView)
+                android.util.Log.d("OverlayService", "Overlay removed")
             } catch (e: Exception) {
+                android.util.Log.e("OverlayService", "Error removing overlay in onDestroy", e)
                 e.printStackTrace()
             }
             overlayView = null
         }
-    }
-
-    private fun toggleSpeaker() {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        val btnSpeaker = overlayView?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSpeaker)
-
-        // Ensure we're in call mode first
-        if (audioManager.mode != android.media.AudioManager.MODE_IN_CALL) {
-            audioManager.mode = android.media.AudioManager.MODE_IN_CALL
-        }
-
-        // Determine current state
-        var isSpeakerOn = false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val currentDevice = audioManager.communicationDevice
-            if (currentDevice != null && currentDevice.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                isSpeakerOn = true
-            } else {
-                // Fallback check
-                isSpeakerOn = audioManager.isSpeakerphoneOn
-            }
-        } else {
-            isSpeakerOn = audioManager.isSpeakerphoneOn
-        }
-
-        if (!isSpeakerOn) {
-            // Turn ON speaker
-            
-            // Primary method: Use legacy API (works on all versions)
-            audioManager.isSpeakerphoneOn = true
-            
-            // Supplementary: Try new API on Android 12+ 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try {
-                    val devices = audioManager.availableCommunicationDevices
-                    val speakerDevice = devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                    if (speakerDevice != null) {
-                        audioManager.setCommunicationDevice(speakerDevice)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-            
-        } else {
-            // Turn OFF speaker
-            
-            // Primary method: Use legacy API
-            audioManager.isSpeakerphoneOn = false
-            
-            // Supplementary: Try new API on Android 12+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try {
-                    audioManager.clearCommunicationDevice()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
         
-        // Update UI to reflect new state
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            updateSpeakerIconState(audioManager)
-        }, 100)
+        android.util.Log.d("OverlayService", "onDestroy() completed")
     }
 }

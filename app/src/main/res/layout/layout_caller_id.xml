@@ -534,15 +534,16 @@
                     android:insetBottom="0dp"
                     android:layout_marginEnd="16dp"/>
 
+
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSpeaker"
+                    android:id="@+id/btnMinimize"
                     android:layout_width="64dp"
                     android:layout_height="64dp"
                     app:backgroundTint="#FFFFFF"
                     app:strokeColor="#E0E0E0"
                     app:strokeWidth="1dp"
                     app:cornerRadius="32dp"
-                    app:icon="@drawable/ic_speaker"
+                    app:icon="@drawable/ic_minimize"
                     app:iconTint="#000000"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"

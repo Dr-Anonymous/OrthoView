@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">OrthoLink</string>
+    <string name="accessibility_service_description">OrthoLink uses this service to automate sending WhatsApp messages when you click the quick action buttons in the call overlay.</string>
 </resources>
