@@ -382,24 +382,24 @@ class OverlayService : Service() {
         }
 
         btnWhatsApp.setOnClickListener {
-            openWhatsApp(phone, "/")
+            openWhatsApp(phone, "/", autoSend = false)
         }
 
         btnClinic.setOnClickListener {
             val isSunday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.SUNDAY
             val time = if (isSunday) "After 4 pm" else "After 7:30 pm"
             val message = "Dr Samuel Manoj Cherukuri\n98668 12555\n\n$time at  OrthoLife :\nRoad number 3,\nR R Nagar, near RTO office,\nKakinada\n\nLocation:\nhttps://g.co/kgs/6ZEukv"
-            openWhatsApp(phone, message)
+            openWhatsApp(phone, message, autoSend = true)
         }
 
         btnLaxmi.setOnClickListener {
             val message = "Dr Samuel Manoj Cherukuri\n98668 12555\n\n9-5 pm at:\nLaxmi Hospital,\nGudarigunta, Kakinada\n\nLocation:\nhttps://g.co/kgs/5Xkr4FU"
-            openWhatsApp(phone, message)
+            openWhatsApp(phone, message, autoSend = true)
         }
 
         btnBadam.setOnClickListener {
             val message = "Dr Samuel Manoj Cherukuri\n98668 12555\n\n5-7 pm at:\n Badam clinical laboratory \nhttps://g.co/kgs/eAgkp5S"
-            openWhatsApp(phone, message)
+            openWhatsApp(phone, message, autoSend = true)
         }
 
         try {
@@ -514,10 +514,10 @@ class OverlayService : Service() {
         android.util.Log.d("OverlayService", "Service stop requested")
     }
 
-    private fun openWhatsApp(phone: String, message: String?) {
+    private fun openWhatsApp(phone: String, message: String?, autoSend: Boolean = false) {
         try {
             // Set automation state
-            AutomationState.shouldSend = true
+            AutomationState.shouldSend = autoSend
             AutomationState.currentPhoneNumber = phone
             AutomationState.currentMessage = message
             AutomationState.hasLink = message?.contains("http") == true
