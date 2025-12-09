@@ -174,13 +174,11 @@ class OverlayService : Service() {
         // Handle Unknown Caller (Patient not found) => Strip View
         if (patient == null) {
             // Adjust Window Layout Params for Strip
-            val params = overlayView!!.layoutParams as WindowManager.LayoutParams
-            params.height = WindowManager.LayoutParams.WRAP_CONTENT
-            params.gravity = Gravity.CENTER
-            try {
-                windowManager!!.updateViewLayout(overlayView, params)
-            } catch (e: Exception) { e.printStackTrace() }
-
+            // Use the layoutParams we just created above!
+            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
+            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
+            layoutParams.gravity = Gravity.CENTER
+            
             // Transparent background
             mainContent.background = null
             mainContent.setPadding(0, 0, 0, 0)
@@ -219,6 +217,8 @@ class OverlayService : Service() {
             try {
                 if (overlayView!!.parent == null) {
                      windowManager?.addView(overlayView, layoutParams)
+                } else {
+                     windowManager?.updateViewLayout(overlayView, layoutParams)
                 }
             } catch (e: Exception) { e.printStackTrace() }
             return
@@ -412,7 +412,6 @@ class OverlayService : Service() {
         val btnMinimize = overlayView!!.findViewById<Button>(R.id.btnMinimize)
         val btnDecline = overlayView!!.findViewById<Button>(R.id.btnDecline)
         val btnRestore = overlayView!!.findViewById<ImageButton>(R.id.btnRestore)
-        val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
 
         btnMinimize.setOnClickListener {
             minimizeOverlay()
