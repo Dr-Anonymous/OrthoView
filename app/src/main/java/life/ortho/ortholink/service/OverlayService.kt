@@ -143,6 +143,10 @@ class OverlayService : Service() {
         val contextThemeWrapper = android.view.ContextThemeWrapper(this, R.style.Theme_OrthoLink)
         overlayView = LayoutInflater.from(contextThemeWrapper).inflate(R.layout.layout_caller_id, null)
 
+        val mainContent = overlayView!!.findViewById<LinearLayout>(R.id.mainContent)
+        val cardCallerInfo = overlayView!!.findViewById<androidx.cardview.widget.CardView>(R.id.cardCallerInfo)
+        val scrollViewDetails = overlayView!!.findViewById<android.widget.ScrollView>(R.id.scrollViewDetails)
+        
         val tvCallerNumber = overlayView!!.findViewById<TextView>(R.id.tvCallerNumber)
         val tvCallerName = overlayView!!.findViewById<TextView>(R.id.tvCallerName)
         val layoutLocation = overlayView!!.findViewById<LinearLayout>(R.id.layoutLocation)
@@ -150,6 +154,10 @@ class OverlayService : Service() {
         val tvDate = overlayView!!.findViewById<TextView>(R.id.tvDate)
         
         val layoutActions = overlayView!!.findViewById<LinearLayout>(R.id.layoutActions)
+        val layoutCallControls = overlayView!!.findViewById<LinearLayout>(R.id.layoutCallControls)
+        val layoutWhatsAppControl = overlayView!!.findViewById<LinearLayout>(R.id.layoutWhatsAppControl)
+        val layoutLocationButtons = overlayView!!.findViewById<LinearLayout>(R.id.layoutLocationButtons)
+        
         val btnReceiveCall = overlayView!!.findViewById<Button>(R.id.btnReceiveCall)
         val btnWhatsApp = overlayView!!.findViewById<Button>(R.id.btnWhatsApp)
         val btnClinic = overlayView!!.findViewById<Button>(R.id.btnClinic)
@@ -163,26 +171,101 @@ class OverlayService : Service() {
 
         tvCallerNumber.text = phone
         
-        if (patient != null) {
-            // Use name from API if available, otherwise construct it
-            val displayName = patient.name ?: "${patient.firstName ?: ""} ${patient.lastName ?: ""}".trim()
-            tvCallerName.text = if (displayName.isNotEmpty()) displayName else "Unknown Caller"
+        // Handle Unknown Caller (Patient not found) => Strip View
+        if (patient == null) {
+            // Adjust Window Layout Params for Strip
+            val params = overlayView!!.layoutParams as WindowManager.LayoutParams
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT
+            params.gravity = Gravity.CENTER
+            try {
+                windowManager!!.updateViewLayout(overlayView, params)
+            } catch (e: Exception) { e.printStackTrace() }
+
+            // Transparent background
+            mainContent.background = null
+            mainContent.setPadding(0, 0, 0, 0)
             
-            // Location
-            if (!patient.location.isNullOrEmpty()) {
-                tvLocation.text = patient.location
-                layoutLocation.visibility = View.VISIBLE
+            // Hide full screen elements
+            cardCallerInfo.visibility = View.GONE
+            scrollViewDetails.visibility = View.GONE
+            
+            // Show Actions but hide specific controls
+            layoutActions.visibility = View.VISIBLE
+            layoutCallControls.visibility = View.GONE
+            layoutWhatsAppControl.visibility = View.GONE
+            layoutLocationButtons.visibility = View.VISIBLE
+            
+            // Ensure location buttons are visible (parent lin layout is visible by default)
+            
+            // Populate buttons listeners (same as below)
+             btnClinic.setOnClickListener {
+                val isSunday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.SUNDAY
+                val time = if (isSunday) "After 4 pm" else "After 7:30 pm"
+                val message = "Dr Samuel Manoj Cherukuri\n98668 12555\n\n$time at  OrthoLife :\nRoad number 3,\nR R Nagar, near RTO office,\nKakinada\n\nLocation:\nhttps://g.co/kgs/6ZEukv"
+                openWhatsApp(phone, message, autoSend = true)
             }
 
-            // Date
-            if (!patient.createdAt.isNullOrEmpty()) {
-                try {
-                    // Simple date formatting, assuming ISO string
-                    val date = patient.createdAt.substring(0, 10)
-                    tvDate.text = date
+            btnLaxmi.setOnClickListener {
+                val message = "Dr Samuel Manoj Cherukuri\n98668 12555\n\n9-5 pm at:\nLaxmi Hospital,\nGudarigunta, Kakinada\n\nLocation:\nhttps://g.co/kgs/5Xkr4FU"
+                openWhatsApp(phone, message, autoSend = true)
+            }
+
+            btnBadam.setOnClickListener {
+                val message = "Dr Samuel Manoj Cherukuri\n98668 12555\n\n5-7 pm at:\n Badam clinical laboratory \nhttps://g.co/kgs/eAgkp5S"
+                openWhatsApp(phone, message, autoSend = true)
+            }
+            
+            // We are done for unknown caller
+            try {
+                if (overlayView!!.parent == null) {
+                     windowManager?.addView(overlayView, layoutParams)
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+            return
+        }
+
+        // --- Known Caller Logic (Full Overlay) ---
+        // Use name from API if available, otherwise construct it
+        val displayName = patient.name ?: "${patient.firstName ?: ""} ${patient.lastName ?: ""}".trim()
+        tvCallerName.text = if (displayName.isNotEmpty()) displayName else "Unknown Caller"
+        
+        // Location
+        if (!patient.location.isNullOrEmpty()) {
+            tvLocation.text = patient.location
+            layoutLocation.visibility = View.VISIBLE
+        }
+
+        // Date
+        if (!patient.createdAt.isNullOrEmpty()) {
+            try {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
+                // Handle timezone if needed, usually ISO is UTC but we might need lenient parsing
+                // or just parse the first part if it has milliseconds/timezone
+                sdf.timeZone = java.util.TimeZone.getTimeZone("UTC") // Assuming DB is UTC
+                    val dateObj = sdf.parse(patient.createdAt.split("+")[0].split(".")[0]) // clean up ISO string
+                    
+                    if (dateObj != null) {
+                        val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
+                            dateObj.time,
+                            System.currentTimeMillis(),
+                            android.text.format.DateUtils.MINUTE_IN_MILLIS
+                        )
+                        
+                        val displayFormat = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault())
+                        displayFormat.timeZone = java.util.TimeZone.getDefault() // Show in local time
+                        val formattedDate = displayFormat.format(dateObj)
+                        
+                        tvDate.text = "$relativeTime ($formattedDate)"
+                    } else {
+                         tvDate.text = patient.createdAt.substring(0, 10)
+                    }
                     tvDate.visibility = View.VISIBLE
                 } catch (e: Exception) {
-                    // Ignore parsing errors
+                    // Fallback
+                     try {
+                        tvDate.text = patient.createdAt.substring(0, 10)
+                        tvDate.visibility = View.VISIBLE
+                     } catch(e2: Exception) {}
                 }
             }
             
@@ -221,11 +304,6 @@ class OverlayService : Service() {
 
             layoutDetails.visibility = View.VISIBLE
             cardDetails.visibility = View.VISIBLE
-        } else {
-            tvCallerName.text = "Unknown Caller"
-            layoutDetails.visibility = View.GONE
-            cardDetails.visibility = View.GONE
-        }
         
         // Bind Calendar Events
         if (!calendarEvents.isNullOrEmpty()) {

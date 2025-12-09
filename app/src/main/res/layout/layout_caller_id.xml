@@ -15,6 +15,7 @@
 
         <!-- Header: Caller Info -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/cardCallerInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
@@ -90,6 +91,7 @@
 
         <!-- Scrollable Content -->
         <ScrollView
+            android:id="@+id/scrollViewDetails"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -461,7 +463,7 @@
 
                         <LinearLayout
                             android:id="@+id/layoutAttachmentPreview"
-                            android:layout_width="match_parent"
+                            android:layout_width="match_content"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
                             android:visibility="gone"
@@ -497,6 +499,7 @@
             android:layout_marginTop="16dp">
 
             <LinearLayout
+                android:id="@+id/layoutCallControls"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -555,6 +558,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/layoutWhatsAppControl"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -574,6 +578,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/layoutLocationButtons"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
