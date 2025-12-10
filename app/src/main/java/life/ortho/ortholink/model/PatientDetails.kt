@@ -16,6 +16,8 @@ data class PatientDetails(
     @SerializedName("medications") val medications: JsonElement?,
     @SerializedName("advice") val advice: String?,
     @SerializedName("followup") val followup: String?,
+    @SerializedName("procedure") val procedure: String?,
+    @SerializedName("referred_to") val referredTo: String?,
     @SerializedName("location") val location: String?,
     @SerializedName("created_at") val createdAt: String?
 )

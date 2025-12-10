@@ -275,8 +275,10 @@ class OverlayService : Service() {
             bindDetail(overlayView!!.findViewById(R.id.layoutFindings), overlayView!!.findViewById(R.id.tvFindings), patient.findings)
             bindDetail(overlayView!!.findViewById(R.id.layoutInvestigations), overlayView!!.findViewById(R.id.tvInvestigations), patient.investigations)
             bindDetail(overlayView!!.findViewById(R.id.layoutDiagnosis), overlayView!!.findViewById(R.id.tvDiagnosis), patient.diagnosis)
+            bindDetail(overlayView!!.findViewById(R.id.layoutProcedure), overlayView!!.findViewById(R.id.tvProcedure), patient.procedure)
             bindDetail(overlayView!!.findViewById(R.id.layoutAdvice), overlayView!!.findViewById(R.id.tvAdvice), patient.advice)
             bindDetail(overlayView!!.findViewById(R.id.layoutFollowUp), overlayView!!.findViewById(R.id.tvFollowUp), patient.followup)
+            bindDetail(overlayView!!.findViewById(R.id.layoutReferredTo), overlayView!!.findViewById(R.id.tvReferredTo), patient.referredTo)
 
             // Parse medications - NAMES ONLY
             var medsText: String? = null
