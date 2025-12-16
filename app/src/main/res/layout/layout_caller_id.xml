@@ -129,13 +129,50 @@
                         android:orientation="vertical"
                         android:padding="16dp">
 
+                        <!-- Vitals -->
+                        <LinearLayout
+                            android:id="@+id/layoutVitals"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:background="@drawable/rounded_background"
+                            android:backgroundTint="#F5F5F5"
+                            android:padding="8dp"
+                            android:layout_marginBottom="12dp">
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_stethoscope"
+                                android:layout_marginEnd="12dp"
+                                android:layout_marginTop="2dp"
+                                app:tint="#2196F3"/>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Vitals"
+                                    android:textStyle="bold"
+                                    android:textSize="14sp"
+                                    android:layout_marginBottom="2dp"/>
+                                <TextView
+                                    android:id="@+id/tvVitals"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textSize="13sp"
+                                    android:textColor="#616161"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
                         <!-- Personal Note -->
                         <LinearLayout
                             android:id="@+id/layoutPersonalNote"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -168,7 +205,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -201,7 +238,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -234,7 +271,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -267,7 +304,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -300,7 +337,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -333,7 +370,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -366,7 +403,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -399,7 +436,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="12dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
@@ -432,7 +469,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="0dp">
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"

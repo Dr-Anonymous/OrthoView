@@ -269,6 +269,15 @@ class OverlayService : Service() {
                 }
             }
             
+            // Bind Vitals
+            val vitalsList = mutableListOf<String>()
+            if (!patient.bp.isNullOrEmpty()) vitalsList.add("BP: ${patient.bp}")
+            if (!patient.weight.isNullOrEmpty()) vitalsList.add("Weight: ${patient.weight}")
+            if (!patient.temperature.isNullOrEmpty()) vitalsList.add("Temp: ${patient.temperature}")
+            
+            val vitalsText = if (vitalsList.isNotEmpty()) vitalsList.joinToString("  |  ") else null
+            bindDetail(overlayView!!.findViewById(R.id.layoutVitals), overlayView!!.findViewById(R.id.tvVitals), vitalsText)
+
             // Bind details
             bindDetail(overlayView!!.findViewById(R.id.layoutPersonalNote), overlayView!!.findViewById(R.id.tvPersonalNote), patient.personalNote)
             bindDetail(overlayView!!.findViewById(R.id.layoutComplaints), overlayView!!.findViewById(R.id.tvComplaints), patient.complaints)
